@@ -50,12 +50,43 @@ def index():
         try:
             # Fetch all rows and convert them to dictionaries
             cursor.execute(response.choices[0].message['content'])
+
             columns = [desc[0] for desc in cursor.description]
             for row in cursor.fetchall():
                 row_dict = dict(zip(columns, row))
                 results.append(row_dict)
+        except SyntaxError as se:
+                # analyse the syntax error. if it's not valid sql, continue. if the columns are incorrect, refactor via prompting
+            results = {'message': 'invalid sql', 'type': 'error'}
+        except sqlite3.OperationalError as oe:
+            print(oe)
+            if 'column:' in str(oe).split(' '):
+                results = {'message': f'{oe}', 'type': 'error'}
+            # retry the prompt, pointing out the error
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {'role': 'system', 'content': 'you are an assistant that helps generate sql to retrieve data. you return code only. do not provide notes'},
+                        {"role": "user", "content": f'{prompt}'},
+                        {'role': 'assistant', 'content': f"{response.choices[0].message['content']}"},
+                        {"role": "user", "content": "the sql contains columns that don't exist. can you rewrite it and make sure it adheres to the above schema? reply strictly with sql only"},
+                        ],
+                    temperature=0
+                )
+                new_results = []
+                print('new response: ', response.choices[0].message['content'])
+                cursor.execute(response.choices[0].message['content'].split(':')[1].split(';')[0])
+                columns = [desc[0] for desc in cursor.description]
+                for row in cursor.fetchall():
+                    row_dict = dict(zip(columns, row))
+                    new_results.append(row_dict)
+                results = new_results if len(new_results) > 0 else results
+
+
         except Exception as e:
             results = {'error' : str(e)}
+            print('general error')
+            print(e)
     return orjson.dumps(results), {'Content-Type': 'application/json'}
 
 @app.route('/graph', methods=['POST'])
