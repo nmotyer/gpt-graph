@@ -15,7 +15,7 @@ class gpt:
         self.get_api_secret()
 
     def prompt(self, prompt:str, use_chat_history: bool = True) -> str:
-        self.messages.append([{'role': 'user', 'content': prompt}])
+        self.messages.append({'role': 'user', 'content': prompt})
         response = self._query(self.messages if use_chat_history else self.messages[-1])
         self.messages.append({'role': 'assistant', 'content': response.choices[0].message['content']})
         return response.choices[0].message['content']

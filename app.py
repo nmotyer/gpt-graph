@@ -10,48 +10,28 @@ from categorise import categorise
 from generate_schema import process_schema
 
 from gpt import gpt
+from gpt import ModeEnum
 from prompt_store import get_data_prompt, get_graph_prompt
+from utils import sql_to_json
 
 app = Flask(__name__)
 CORS(app)
 
 @app.route('/data', methods=['POST'])
 def index():
+    data_assistant = gpt(ModeEnum.DATA)
+    response = data_assistant.prompt(get_data_prompt(request.json.get('prompt', None)))
     results = []
-
-    # print(request.json)
-
-    prompt = request.json.get('prompt', None)
-    if prompt:
-        # augment the prompt
-        prompt = f"""given a sqlite3 database with 4 tables,
-        users (id integer primary key, first_name text, last_name text, organisation_id int, date_enrolled text )
-        organisations (id integer primary key, parent_id integer, name text), 
-        publications (id INTEGER PRIMARY KEY, title TEXT NOT NULL, date_published DATE NOT NULL, publisher_name TEXT NOT NULL) and
-        publication_authorship (id INTEGER PRIMARY KEY, author_id INTEGER, publication_id INTEGER, FOREIGN KEY(author_id) REFERENCES users(id), FOREIGN KEY(publication_id) REFERENCES publications(id)),
-        generate sql for {prompt} . return sql only"""
+    if response:
         # Open the database
         conn = sqlite3.connect('db/db.db', check_same_thread=False)
         cursor = conn.cursor()
-
-        response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {'role': 'system', 'content': 'you are an assistant that helps generate sql to retrieve data. you return code only. do not provide notes'},
-            {"role": "user", "content": f'{prompt}'}
-            ],
-        temperature=0
-    )
-        print(response.choices[0].message['content'])
+        print(response)
         # use the generated_text to query the database
         try:
             # Fetch all rows and convert them to dictionaries
-            cursor.execute(response.choices[0].message['content'])
-
-            columns = [desc[0] for desc in cursor.description]
-            for row in cursor.fetchall():
-                row_dict = dict(zip(columns, row))
-                results.append(row_dict)
+            cursor.execute(response)
+            results = sql_to_json(cursor)
         except SyntaxError as se:
                 # analyse the syntax error. if it's not valid sql, continue. if the columns are incorrect, refactor via prompting
             results = {'message': 'invalid sql', 'type': 'error'}
@@ -60,29 +40,14 @@ def index():
             if 'column:' in str(oe).split(' '):
                 results = {'message': f'{oe}', 'type': 'error'}
             # retry the prompt, pointing out the error
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {'role': 'system', 'content': 'you are an assistant that helps generate sql to retrieve data. you return code only. do not provide notes'},
-                        {"role": "user", "content": f'{prompt}'},
-                        {'role': 'assistant', 'content': f"{response.choices[0].message['content']}"},
-                        {"role": "user", "content": "the sql contains columns that don't exist. can you rewrite it and make sure it adheres to the above schema? reply strictly with sql only"},
-                        ],
-                    temperature=0
+                response = data_assistant.prompt(
+                    "the sql contains columns that don't exist. can you rewrite it and make sure it adheres to the above schema? reply strictly with sql only"
                 )
-                new_results = []
-                print('new response: ', response.choices[0].message['content'])
-                cursor.execute(response.choices[0].message['content'].split(':')[1].split(';')[0])
-                columns = [desc[0] for desc in cursor.description]
-                for row in cursor.fetchall():
-                    row_dict = dict(zip(columns, row))
-                    new_results.append(row_dict)
-                results = new_results if len(new_results) > 0 else results
-
-
+                print('new response: ', response)
+                cursor.execute(response.split(':')[1].split(';')[0])
+                results = sql_to_json(cursor) if sql_to_json(cursor) > 0 else results
         except Exception as e:
-            results = {'error' : str(e)}
-            print('general error')
+            results = {'message' : str(e), 'type': 'error'}
             print(e)
     return orjson.dumps(results), {'Content-Type': 'application/json'}
 

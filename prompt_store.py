@@ -1,5 +1,5 @@
 def get_data_prompt(prompt: str) -> str:
-    return """given a sqlite3 database with 4 tables,
+    return f"""given a sqlite3 database with 4 tables,
         users (id integer primary key, first_name text, last_name text, organisation_id int, date_enrolled text )
         organisations (id integer primary key, parent_id integer, name text), 
         publications (id INTEGER PRIMARY KEY, title TEXT NOT NULL, date_published DATE NOT NULL, publisher_name TEXT NOT NULL) and
