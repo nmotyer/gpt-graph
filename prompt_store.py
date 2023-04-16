@@ -1,9 +1,11 @@
+from utils import generate_sql_schema
+import sqlite3
+db = sqlite3.connect('db/db.db', check_same_thread=False)
+sql_schema = generate_sql_schema(db.cursor())
+db.close()
 def get_data_prompt(prompt: str) -> str:
-    return f"""given a sqlite3 database with 4 tables,
-        users (id integer primary key, first_name text, last_name text, organisation_id int, date_enrolled text )
-        organisations (id integer primary key, parent_id integer, name text), 
-        publications (id INTEGER PRIMARY KEY, title TEXT NOT NULL, date_published DATE NOT NULL, publisher_name TEXT NOT NULL) and
-        publication_authorship (id INTEGER PRIMARY KEY, author_id INTEGER, publication_id INTEGER, FOREIGN KEY(author_id) REFERENCES users(id), FOREIGN KEY(publication_id) REFERENCES publications(id)),
+    return f"""given a sqlite3 database with these tables:
+        {sql_schema},
         generate sql for {prompt} . return sql only"""
 
 def get_graph_prompt(result_schema: dict) -> str:
@@ -18,9 +20,6 @@ def get_graph_prompt(result_schema: dict) -> str:
         return code only"""
 
 def get_idea_prompt() -> str:
-    return """given a sqlite3 database with 4 tables,
-        users (id integer primary key, first_name text, last_name text, organisation_id int, date_enrolled text )
-        organisations (id integer primary key, parent_id integer, name text), 
-        publications (id INTEGER PRIMARY KEY, title TEXT NOT NULL, date_published DATE NOT NULL, publisher_name TEXT NOT NULL) and
-        publication_authorship (id INTEGER PRIMARY KEY, author_id INTEGER, publication_id INTEGER, FOREIGN KEY(author_id) REFERENCES users(id), FOREIGN KEY(publication_id) REFERENCES publications(id)),
-        give some ideas/names for reports that would be useful for a university"""
+    return f"""given a sqlite3 database with these tables:
+    {sql_schema}
+        give some ideas/names for reports that would be useful for a university aiming for funding for certain departments and growth"""
