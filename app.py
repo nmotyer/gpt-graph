@@ -53,45 +53,15 @@ def index():
 
 @app.route('/graph', methods=['POST'])
 def graph():
-        print('graph request received')
-        raw_results = request.json.get('data', None)
-        result_schema = process_schema(raw_results)
-        second_prompt = f"""given the data in a variable named raw_results that adheres to this jsonschema: {result_schema} and is in a list
-        give an example of charts.js code that could display the data. try to pick the most appropriate chart type. 
-        the document id for the canvas is 'myChart'. 
-        the output must only include the <script> tag. 
-        you must not define raw_results in the code.
-        never declare a raw_results variable as it already exists
-        do not include fetch or an api call. only methods to process the data and the chart itself.
-        usr 'var' to declare variables and never 'const' 
-        return code only"""
-        response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {'role': 'system', 'content': 'you are an assistant that helps generate code to retrieve and display data. you return all code in <script> tags'},
-            {"role": "user", "content": f'{second_prompt}'}
-            ],
-            temperature=0
-        )
-
-        chart_script = response.choices[0].message['content']
-        # process script to only get the <script> tags and contents
+        graph_assistant = gpt(ModeEnum.GRAPH)
+        second_prompt = get_graph_prompt(process_schema(request.json.get('data', None)))
+        chart_script = graph_assistant.prompt(second_prompt)
+        # process script to only get the <script> tag contents
         script_regex = re.compile(r'<script>(.*?)</script>', re.DOTALL)
         script_match = script_regex.search(chart_script)
-
         if script_match:
             chart_script = script_match.group(1) #f'<script>{script_match.group(1)}</script>'
         return orjson.dumps({'script': chart_script}), {'Content-Type': 'application/json'}
-
-# Path for our main Svelte page
-@app.route("/")
-def base():
-    return send_from_directory('client/public', 'index.html')
-
-# Path for all the static files (compiled JS/CSS, etc.)
-@app.route("/<path:path>")
-def home(path):
-    return send_from_directory('client/public', path)
 
 if __name__ == "__main__":
     app.run(debug=True)
