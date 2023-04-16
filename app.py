@@ -1,8 +1,6 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request
 from flask_cors import CORS
 import orjson
-import openai
-import os
 import sqlite3
 import re
 
