@@ -5,18 +5,15 @@ import openai
 import os
 import sqlite3
 import re
+
 from categorise import categorise
 from generate_schema import process_schema
 
+from gpt import gpt
+from prompt_store import get_data_prompt, get_graph_prompt
+
 app = Flask(__name__)
 CORS(app)
-creds = ''
-try:
-    with open('credentials.json', 'r') as cbytes:
-        creds = orjson.loads(cbytes.read())['key']
-except IOError:
-    pass
-openai.api_key = os.environ.get("OPENAI_API_KEY", creds)
 
 @app.route('/data', methods=['POST'])
 def index():
