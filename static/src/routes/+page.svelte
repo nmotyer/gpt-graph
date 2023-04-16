@@ -3,6 +3,8 @@
 
 	// import components
 	import DataTable from '../components/data-table.svelte';
+  import ChatWindow from '../components/chat-window.svelte';
+  import ToolBar from '../components/toolbar.svelte';
 
 	// declare variables used on page
 	let tableData: { [key: string]: any; }[];
@@ -99,26 +101,28 @@
 	<title>Home</title>
 	<meta name="description" content="Svelte demo app" />
 </svelte:head>
-
+<ToolBar />
 <section class="flex flex-col justify-center items-center h-full" id="section">
 	<!-- content here -->
 
-	<canvas id="myChart" class="myChart">
+	<canvas id="myChart" class="myChart -mb-6">
 	</canvas>
-
-	<!-- {#if scriptContent}
-	{@html scriptContent}
-	{/if} -->
-
+  <div class="w-full">
+    
+  </div>
     <div class="w-full mt-auto">
       {#if tableData}
-      <div transition:fly={{duration:200}} class="p-6">
+      <div transition:fly={{duration:200}} class="p-6 -mb-6">
         <DataTable data={tableData} />
       </div>
     {/if}
       {#if promptLabel}
         <p transition:fly={{y: 200, duration:200}} class="font-bold text-lg h-full p-2">{promptLabel}</p>
       {/if}
+      <div class=" sticky">
+        <ChatWindow />
+      </div>
+      
       <textarea class="w-full p-2 font-bold text-lg resize-none shadow-inner drop-shadow" on:keydown={handleKeyPress}></textarea>
     </div>
 </section>
