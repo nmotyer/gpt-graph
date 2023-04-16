@@ -6,6 +6,7 @@ from enum import Enum
 class ModeEnum(Enum):
     DATA = 1
     GRAPH = 2
+    IDEA = 3
 
 class gpt:
     def __init__(self, mode: ModeEnum):
@@ -16,7 +17,7 @@ class gpt:
 
     def prompt(self, prompt:str, use_chat_history: bool = True) -> str:
         self.messages.append({'role': 'user', 'content': prompt})
-        response = self._query(self.messages if use_chat_history else self.messages[-1])
+        response = self._query(self.messages if use_chat_history else [self.messages[-1]])
         self.messages.append({'role': 'assistant', 'content': response.choices[0].message['content']})
         return response.choices[0].message['content']
 
@@ -51,4 +52,7 @@ def get_starting_prompts(mode: ModeEnum) -> list[dict]:
             'role': 'system', 
             'content': 'you are an assistant that helps generate code to retrieve and display data. you return all code in <script> tags'
                 }]
-    return [{}]
+    return [{
+            'role': 'system', 
+            'content': 'you are an assistant that gives advice and ideas for creating reports'
+    }]

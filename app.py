@@ -9,7 +9,7 @@ from generate_schema import process_schema
 
 from gpt import gpt
 from gpt import ModeEnum
-from prompt_store import get_data_prompt, get_graph_prompt
+from prompt_store import get_data_prompt, get_graph_prompt, get_idea_prompt
 from utils import sql_to_json
 
 app = Flask(__name__)
@@ -60,6 +60,24 @@ def graph():
         if script_match:
             chart_script = script_match.group(1) #f'<script>{script_match.group(1)}</script>'
         return orjson.dumps({'script': chart_script}), {'Content-Type': 'application/json'}
+
+@app.route('/idea', methods=['POST'])
+def idea():
+    idea_assistant = gpt(ModeEnum.IDEA)
+    response = idea_assistant.prompt(request.json.get('data', get_idea_prompt()))
+    return orjson.dumps({'message': response}), {'Content-Type': 'application/json'}
+
+@app.route('/summarise', methods=['POST'])
+def summary():
+    idea_assistant = gpt(ModeEnum.IDEA)
+    response = idea_assistant.prompt(request.json.get('data', """given this json: 
+    [{"name":"Department of Educational Psychology","enrollment_growth":155},
+    {"name":"Department of Special Education","enrollment_growth":146},
+    {"name":"Faculty of Environmental Sciences","enrollment_growth":144},
+    {"name":"Faculty of Law","enrollment_growth":143},
+    {"name":"Faculty of Information Technology","enrollment_growth":141}]
+    about the university of melbourne, please summarise the data and point our any trends"""), False)
+    return orjson.dumps({'message': response}), {'Content-Type': 'application/json'}
 
 if __name__ == "__main__":
     app.run(debug=True)
