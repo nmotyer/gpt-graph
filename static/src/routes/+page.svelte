@@ -19,6 +19,7 @@
 		}
     if (event.key === 'Enter' && (event.target as HTMLTextAreaElement)?.value.trim() !== '') {
       // Call your function here
+      promptLabel = ''
       promptLabel = (event.target as HTMLTextAreaElement)?.value.trim()
       console.log('Enter key pressed and text exists in the textarea');
 	  const text: string = (event.target as HTMLTextAreaElement)?.value.trim();
@@ -119,7 +120,7 @@
       {#if promptLabel}
         <p transition:fly={{y: 200, duration:200}} class="font-bold text-lg h-full p-2">{promptLabel}</p>
       {/if}
-      <div class=" sticky">
+      <div class="">
         <ChatWindow />
       </div>
       

@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "organisation_name": {
+      "type": "string"
+    },
+    "year_enrolled": {
+      "type": "string"
+    },
+    "enrollment_count": {
+      "type": "number"
+    }
+  },
+  "$defs": {}
+}

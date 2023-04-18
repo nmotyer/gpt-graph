@@ -15,6 +15,69 @@ def is_date(string, format='%Y-%m-%d'):
         return True
     except ValueError:
         return False
+    
+def find_min_max(json_data: list[dict], key_to_use: str) -> list[dict]:
+# Sort the JSON data by the key to be used
+    sorted_json_data = sorted(json_data, key=lambda x: x[key_to_use])
+
+    # Calculate the median value and find the JSON closest to it
+    total = len(sorted_json_data)
+    middle = total // 2
+    if total % 2 == 0:
+        median_value = (sorted_json_data[middle - 1][key_to_use] + sorted_json_data[middle][key_to_use]) / 2
+        median_json = sorted_json_data[middle - 1:middle + 1]
+    else:
+        median_value = sorted_json_data[middle][key_to_use]
+        median_json = [sorted_json_data[middle]]
+
+    # Find JSON with min value (which is the first item in the sorted array)
+    min_json = sorted_json_data[0]
+
+    # Find JSON with max value (which is the last item in the sorted array)
+    max_json = sorted_json_data[-1]
+
+    # Get 8 JSON closest to the median value
+    if len(median_json) == 1:
+        closest_json = sorted_json_data[:middle] + sorted_json_data[middle + 1:]
+    else:
+        closest_json = sorted_json_data[:middle - 1] + sorted_json_data[middle + 1:]
+
+    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 10 else len(sorted_json_data) - 2)
+    random_json.insert(0, min_json)
+    random_json.append(max_json)
+    return random_json
+
+def has_duplicates(json_data: list[dict], field: str) -> bool:
+    seen_values = set()
+    for json_obj in json_data:
+        value = json_obj.get(field)
+        if value is not None and isinstance(value, str):
+            if value in seen_values:
+                return True
+            seen_values.add(value)
+    return False
+
+def can_group(json_data: list[dict], fields: list[str]) -> list[str]:
+    return [field for field in fields if has_duplicates(json_data, field)]
+
+def join_with_and(words: list[str]) -> str:
+    if len(words) == 0:
+        return ""
+    elif len(words) == 1:
+        return words[0]
+    elif len(words) == 2:
+        return " and ".join(words)
+    else:
+        return ", ".join(words[:-1]) + ", and " + words[-1]
+def generate_field_description(number_fields: list[str] = [],
+                               date_fields: list[str] = [],
+                               group_fields: list[str] = [],
+                               text_fields: list[str] = []) -> str:
+    return f"""in the data described by the jsonschema:
+{join_with_and(number_fields)} {'are numbers' if len(number_fields) > 0 else ''}
+{join_with_and(date_fields)} {'are dates and should be the x-axis' if len(date_fields) > 0 else ''}
+{join_with_and(group_fields)} {'contains duplicate values within their own fields and each unique value should be its own dataset possible' if len(group_fields) > 0 else ''}
+{join_with_and(text_fields)} {'are string values' if len(text_fields) > 0 else ''}"""
 
 def sql_to_json(cursor: sqlite3.Cursor) -> list[dict]:
     results = []
@@ -28,15 +91,17 @@ def sql_to_json(cursor: sqlite3.Cursor) -> list[dict]:
 def summarise_json(json_schema:dict, json_data:list[dict]) -> dict:
     # use the json schema to find number fields
     number_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'number']
-    # find the min and max of the number fields
+    # find the min, max and median of the number fields and return json rows that contain those or are nearest to those values
+    candidate_json = find_min_max(json_data, number_fields[0])
 
     # check if any string fields are dates
     check_date_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'string']
     date_fields = []
     text_fields = []
+    can_group_fields = []
     for check_date_field in check_date_fields:
         temp_check = []
-        for obj in json_data[:9]:
+        for obj in candidate_json:
             temp_check.append(is_date(obj[check_date_field]))
         if False in temp_check:
             text_fields.append(check_date_field)
@@ -44,11 +109,11 @@ def summarise_json(json_schema:dict, json_data:list[dict]) -> dict:
             date_fields.append(check_date_field)
     
     # see if the text fields can be grouped (check duplicate values)
+
+    can_group_fields = can_group(json_data, text_fields)
         
-    print(number_fields)
-    print(date_fields)
-    print(text_fields)
-    return
+    print(generate_field_description(number_fields, date_fields, can_group_fields, text_fields))
+    return candidate_json, generate_field_description(number_fields, date_fields, can_group_fields, text_fields)
 
 def generate_sql_schema(cursor: sqlite3.Cursor) -> str:
     # Query the sqlite_master table to retrieve the schema information
