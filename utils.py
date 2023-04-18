@@ -42,7 +42,7 @@ def find_min_max(json_data: list[dict], key_to_use: str) -> list[dict]:
     else:
         closest_json = sorted_json_data[:middle - 1] + sorted_json_data[middle + 1:]
 
-    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 10 else len(sorted_json_data) - 2)
+    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 10 else len(sorted_json_data))
     random_json.insert(0, min_json)
     random_json.append(max_json)
     return random_json
@@ -92,7 +92,7 @@ def summarise_json(json_schema:dict, json_data:list[dict]) -> dict:
     # use the json schema to find number fields
     number_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'number']
     # find the min, max and median of the number fields and return json rows that contain those or are nearest to those values
-    candidate_json = find_min_max(json_data, number_fields[0])
+    candidate_json = find_min_max(json_data, number_fields[0]) if len(number_fields) > 0 else random.choices(json_data, k=8 if len(json_data) > 8 else len(json_data))
 
     # check if any string fields are dates
     check_date_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'string']
