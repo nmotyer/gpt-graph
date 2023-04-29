@@ -3,3 +3,5 @@ flask-cors
 orjson
 openai
 faker
+flask-socketio
+eventlet

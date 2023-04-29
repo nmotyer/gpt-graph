@@ -2,14 +2,20 @@ from utils import generate_sql_schema, summarise_json
 import sqlite3
 
 # retrieve db schema for the below prompts
-db = sqlite3.connect('db/db.db', check_same_thread=False)
+db = sqlite3.connect('/home/nick/code/alex/db/data.db', check_same_thread=False)
 sql_schema = generate_sql_schema(db.cursor())
 db.close()
 
 def get_data_prompt(prompt: str) -> str:
     return f"""given a sqlite3 database with these tables:
         {sql_schema},
-        generate sql for {prompt} . return sql only"""
+        generate sql for {prompt} . Do not use aggregate functions in any WHERE clauses.
+        never return IDs in output unless asked.
+        Do not add columns you don't know exist and make sure to respect foreign keys in the given schema.
+        Be creative but the SQL must be correct, not nessesary to use all tables.
+        Never use COUNT(citation_counts_by_year.X) or COUNT(citations.X). Never count citations.
+        The end goal is to attempt to graph the output, try and limit dimensions.
+        return sql only"""
 
 def get_graph_prompt(result_schema: dict, key_description: str = None) -> str:
     return f"""given the data in a variable named raw_results that adheres to this jsonschema: {result_schema} and is in a list

@@ -1,6 +1,11 @@
 <script lang="ts">
+    import { io } from 'socket.io-client';
 
     let isVisible = false;
+    let messages: object[];
+    let tableData: object[];
+
+    const socket = io('http://localhost:5000');
   
     function showToolbar() {
       isVisible = true;
@@ -10,22 +15,37 @@
       isVisible = false;
     }
 
+      // subscribe to stores
+  import { messagesStore, tableStore } from '../store';
+  $: {
+    messages = $messagesStore;
+  }
+  $: {
+    tableData = $tableStore;
+  }
+
+  function addMessage(message: object) {
+    // Update the messagesStore by appending a new message
+    messagesStore.update(currentMessages => [
+      ...currentMessages,
+      message
+    ]);
+  }
+
+  function fetchSummary() {
+    if (tableData.length > 0) {
+      const data = tableData.slice(0,10)
+      console.log('fetching summary');
+      socket.emit('summarise', { 'data': data });
+
+      // messages = [...messages, { id: Date.now(), content: data, client: true }];
+      addMessage({ id: Date.now(), content: Array.isArray(data)? data: 'invalid data', client: true })
+    }
+  }
+
     async function getIdea() {
     const requestBody: object = { title: 'New Idea', description: 'Idea Description' };
     const response = await fetch('http://localhost:5000/idea', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-    const data = await response.json();
-    console.log(data)
-  }
-
-  async function getSummary() {
-    const requestBody: object = { title: 'New Idea', description: 'Idea Description' };
-    const response = await fetch('http://localhost:5000/summarise', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -48,7 +68,7 @@
         <a href="#" class="text-white hover:text-yellow-400" on:click={getIdea}><i class="fas fa-lightbulb"></i></a>
       </li>
       <li class="my-4">
-        <a href="#" class="text-white hover:text-gray-200" on:click={getSummary}><i class="fas fa-list"></i></a>
+        <a href="#" class="text-white hover:text-gray-200" on:click={fetchSummary}><i class="fas fa-list"></i></a>
       </li>
       <li class="my-4">
         <a href="#" class="text-white hover:text-blue-400"><i class="fas fa-save"></i></a>

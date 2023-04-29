@@ -1,5 +1,5 @@
 <script lang="ts">
-    export let data: { [key: string]: any }[];
+    export let data: object[];
     import { scale, slide } from 'svelte/transition';
 
     let isTableCollapsed = false;

@@ -13,7 +13,10 @@
       expanded = !expanded;
       size.set($size == 24 ? 360 : 24);
     }
-    let chatDialogue;
+    /**
+	 * @type {any[]}
+	 */
+     export let messages = [];
   
   </script>
   
@@ -24,22 +27,9 @@
     <div class="w-full text-right"><div class="w-full"></div><p class="font-bold ">{expanded? 'close': 'see chat'}</p></div>
     {#if expanded}
       <div class="w-full h-auto max-h-72 rounded-sm bg-white mt-4 overflow-y-scroll p-4" id="chat-dialogue">
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
-        <p>hello hello hello</p>
+        {#each messages as message (message.id)}
+          <p class=" {message.client? 'text-right font-bold': 'text-left'}">{message.content}</p><br />
+        {/each}
       </div>
     {/if}
   </div>

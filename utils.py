@@ -4,14 +4,19 @@ import orjson
 import random
 from datetime import datetime
 
-def is_date(string, format='%Y-%m-%d'):
+def is_date(value, format='%Y-%m-%d'):
+    if isinstance(value, (int, float)):
+        value = str(int(value))
+    elif not isinstance(value, str):
+        return False
+
     try:
-        if len(string) == 2:
-            datetime.strptime(string, '%m')
-        if len(string) == 4:
-            datetime.strptime(string, '%Y')
+        if len(value) == 2:
+            datetime.strptime(value, '%m')
+        elif len(value) == 4:
+            datetime.strptime(value, '%Y')
         else:
-            datetime.strptime(string, format)
+            datetime.strptime(value, format)
         return True
     except ValueError:
         return False
@@ -42,7 +47,7 @@ def find_min_max(json_data: list[dict], key_to_use: str) -> list[dict]:
     else:
         closest_json = sorted_json_data[:middle - 1] + sorted_json_data[middle + 1:]
 
-    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 10 else len(sorted_json_data))
+    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 8 else len(sorted_json_data))
     random_json.insert(0, min_json)
     random_json.append(max_json)
     return random_json
@@ -90,12 +95,16 @@ def sql_to_json(cursor: sqlite3.Cursor) -> list[dict]:
 
 def summarise_json(json_schema:dict, json_data:list[dict]) -> dict:
     # use the json schema to find number fields
-    number_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'number']
+    date_names = ['year', 'month', 'day', 'year_published']
+    for field in json_schema['properties'].keys():
+        print(field)
+    number_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'number' and field not in date_names]
     # find the min, max and median of the number fields and return json rows that contain those or are nearest to those values
     candidate_json = find_min_max(json_data, number_fields[0]) if len(number_fields) > 0 else random.choices(json_data, k=8 if len(json_data) > 8 else len(json_data))
 
     # check if any string fields are dates
     check_date_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'string']
+    check_date_fields += [field for field in json_schema['properties'].keys() if field in date_names]
     date_fields = []
     text_fields = []
     can_group_fields = []
