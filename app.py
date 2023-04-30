@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask
 from flask_cors import CORS
 import orjson
 import sqlite3
@@ -22,6 +22,7 @@ def handle_data(message):
     data_assistant = gpt(ModeEnum.DATA)
     response = data_assistant.prompt(get_data_prompt(message.get('prompt', None)))
     results = []
+    retry = False
 
     if response:
         conn = sqlite3.connect('/home/nick/code/alex/db/data.db', check_same_thread=False)
@@ -34,20 +35,27 @@ def handle_data(message):
         except SyntaxError as se:
             results = {'message': 'invalid sql', 'type': 'error'}
         except sqlite3.OperationalError as oe:
+            # print the error
             print(oe)
-            if 'column:' in str(oe).split(' '):
-                results = {'message': f'{oe}', 'type': 'error'}
-
-                response = data_assistant.prompt(
-                    "the sql contains columns that don't exist. can you rewrite it and make sure it adheres to the above schema? reply strictly with sql only"
-                )
-                print('new response: ', response)
-                cursor.execute(response.split(':')[1].split(';')[0])
-                results = sql_to_json(cursor) if sql_to_json(cursor) > 0 else results
+            # make frontend aware there is an issue
+            emit('response', {'type': 'error', 'message': 'invalid columns detected. retrying...'})
+            # set a flag to retry
+            retry = True
         except Exception as e:
             results = {'message' : str(e), 'type': 'error'}
             print(e)
-
+    if retry:
+            cursor.close()
+            conn.close()
+            new_conn = sqlite3.connect('/home/nick/code/alex/db/data.db', check_same_thread=False)
+            new_cursor = new_conn.cursor()
+            response = data_assistant.prompt(
+                "the sql contains columns that don't exist. can you rewrite it and make sure it adheres to the above schema? reply strictly with sql only"
+            )
+            print('new response: ', response)
+            new_cursor.execute(response) # .split(':')[1].split(';')[0]
+            results = sql_to_json(new_cursor)
+            emit('response', {'message': response, 'type': 'message'}, json=True)
     emit('response', {'result': results, 'type': 'result', 'topic': 'data'}, json=True)
 
 @socketio.on('graph')
@@ -71,13 +79,19 @@ def handle_idea(message):
     response = idea_assistant.prompt(message.get('data', get_idea_prompt()))
     emit('response', {'message': response, 'type': 'message', 'topic': 'idea'}, json=True)
 
+@socketio.on('suggest_title')
+def handle_title(message):
+    idea_assistant = gpt(ModeEnum.IDEA)
+    response = idea_assistant.prompt(f"""given this text:\n{message.get('data')}\n Suggest a title of a report about this data""")
+    emit('response', {'result': response, 'type': 'result', 'topic': 'title'}, json=True)
+
 @socketio.on('summarise')
 def handle_summary(message):
     idea_assistant = gpt(ModeEnum.IDEA)
     summary_json, _ = summarise_json(process_schema(message.get('data')), message.get('data'))
     response = idea_assistant.prompt(f"""given this json: 
     {orjson.dumps(summary_json).decode('utf-8')}
-    about the university of melbourne, please summarise the data and point our any trends""", False)
+    from a database about the university of melbourne and the title of the data: {message.get('title', '')}, please summarise the data and point our any trends""", False)
     print(response)
     emit('response', {'message': response, 'type': 'message', 'topic': 'summary'}, json=True)
 

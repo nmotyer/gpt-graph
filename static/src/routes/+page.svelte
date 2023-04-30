@@ -13,16 +13,22 @@
   let scriptContent: string;
   let newScript: HTMLScriptElement;
   let promptLabel: string;
+  let summary: string;
+
   let currentQueryTopic: string = 'data'
 
   // subscribe to stores
-  import { messagesStore, tableStore } from '../store';
+  import { messagesStore, tableStore, summaryStore, titleStore } from '../store';
   $: {
     messages = $messagesStore;
   }
   $: {
     tableData = $tableStore;
   }
+  // Subscribe to the summaryStore to get updates
+  const unsubscribe = summaryStore.subscribe(value => {
+    summary = value;
+  });
 
   function addMessage(message: object) {
     // Update the messagesStore by appending a new message
@@ -35,10 +41,9 @@
   const socket = io('http://localhost:5000');
 
   socket.on('response', (data: any) => {
-    // console.log(data);
     // Handle the response data
     // Place code to handle different events here based on the data received
-    if (data.type == 'message') {
+    if (data.type == 'message' || data.type == 'error') {
       //messages = [...messages, { id: Date.now(), content: data.message }];
       addMessage({ id: Date.now(), content: data.message })
     }
@@ -74,7 +79,11 @@
       addMessage({ id: Date.now(), content: data.result })
       document.head.appendChild(newScript);
     }
-
+    if (data.type == 'result' && data.topic == 'title') {
+      promptLabel = data.result;
+      titleStore.set(promptLabel)
+      addMessage({ id: Date.now(), content: data.result })
+    }
 
   });
 
@@ -93,6 +102,7 @@ let messages: Array<object> = [];
       // messages = [...messages, { id: Date.now(), content: text, client: true }];
       addMessage({ id: Date.now(), content: text, client: true })
       socket.emit('data', { 'prompt': text });
+      socket.emit('suggest_title', {'data': text})
     }
   }
 
@@ -115,9 +125,14 @@ let messages: Array<object> = [];
 
 	<canvas id="myChart" class="myChart -mb-6">
 	</canvas>
-  <div class="w-full">
-    
+  {#if summary.length > 0}
+  <div class="p-4 bg-gray-100">
+    <p id="typing-text" class="text-lg text-gray-800">
+      {summary}
+    </p>
   </div>
+  {/if}
+  
     <div class="w-full mt-auto">
       {#if tableData.length > 0}
       <div transition:fly={{duration:200}} class="p-6 -mb-6">
@@ -139,5 +154,21 @@ let messages: Array<object> = [];
 	section {
 	  flex: 1;
 	}
+
+  @keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+#typing-text {
+  animation: typing 2s steps(40) 0s forwards;
+  white-space: pre-wrap;
+  overflow: hidden;
+  border-right: none;
+}
   </style>
   

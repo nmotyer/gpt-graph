@@ -4,6 +4,8 @@
     let isVisible = false;
     let messages: object[];
     let tableData: object[];
+    let summary: string;
+    let title: string;
 
     const socket = io('http://localhost:5000');
   
@@ -16,12 +18,18 @@
     }
 
       // subscribe to stores
-  import { messagesStore, tableStore } from '../store';
+  import { messagesStore, tableStore, summaryStore, titleStore } from '../store';
   $: {
     messages = $messagesStore;
   }
   $: {
     tableData = $tableStore;
+  }
+  $: {
+    summary = $summaryStore;
+  }
+  $: {
+    title = $titleStore;
   }
 
   function addMessage(message: object) {
@@ -36,12 +44,21 @@
     if (tableData.length > 0) {
       const data = tableData.slice(0,10)
       console.log('fetching summary');
-      socket.emit('summarise', { 'data': data });
+      socket.emit('summarise', { 'data': data, 'title':  title});
 
       // messages = [...messages, { id: Date.now(), content: data, client: true }];
-      addMessage({ id: Date.now(), content: Array.isArray(data)? data: 'invalid data', client: true })
+      addMessage({ id: Date.now(), content: Array.isArray(data)? JSON.stringify(data.slice(0,3)) + ' ...': 'invalid data', client: true })
     }
   }
+
+  socket.on('response', (data: any) => {
+    // Handle the response data
+    // Place code to handle different events here based on the data received
+    if (data.type == 'message') {
+      addMessage({ id: Date.now(), content: data.message })
+      summaryStore.set(data.message)
+    }
+  })
 
     async function getIdea() {
     const requestBody: object = { title: 'New Idea', description: 'Idea Description' };

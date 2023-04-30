@@ -14,7 +14,7 @@ def get_data_prompt(prompt: str) -> str:
         Do not add columns you don't know exist and make sure to respect foreign keys in the given schema.
         Be creative but the SQL must be correct, not nessesary to use all tables.
         Never use COUNT(citation_counts_by_year.X) or COUNT(citations.X). Never count citations.
-        The end goal is to attempt to graph the output, try and limit dimensions.
+        The end goal is to attempt to graph the output, try and limit dimensions and never include ID columns in the output.
         return sql only"""
 
 def get_graph_prompt(result_schema: dict, key_description: str = None) -> str:
@@ -22,6 +22,7 @@ def get_graph_prompt(result_schema: dict, key_description: str = None) -> str:
         give an example of charts.js code that could display the data. try to pick the most appropriate chart type.
         {key_description if key_description else ''}
         if there are more than 1 dataset, bar or line give all a different colour.
+        if the data appears to have dates try to use a line graph.
         the document id for the canvas is 'myChart'. 
         the output must only include the <script> tag. 
         you must not define raw_results in the code.
