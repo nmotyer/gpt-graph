@@ -50,7 +50,7 @@ def get_starting_prompts(mode: ModeEnum) -> list[dict]:
     elif mode.GRAPH:
         return [{
             'role': 'system', 
-            'content': 'you are an assistant that helps generate code to retrieve and display data. you return all code in <script> tags'
+            'content': 'you are an assistant that helps generate code to retrieve and display data. you return all code in <script> tags and you return complete code only. never explanations or notes'
                 }]
     return [{
             'role': 'system', 

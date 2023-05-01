@@ -6,6 +6,7 @@
     let tableData: object[];
     let summary: string;
     let title: string;
+    let selectTool: string; // Current selected tool
 
     const socket = io('http://localhost:5000');
   
@@ -82,6 +83,9 @@
     <ul class="flex flex-col items-center justify-center h-full">
       <li class="my-4">
         <!-- svelte-ignore a11y-invalid-attribute -->
+        <a href="#" class="text-white hover:text-gray-200" on:click={() => (selectTool = 'select')}><i class="fas fa-mouse-pointer"></i></a>
+      </li>
+      <li class="my-4">
         <a href="#" class="text-white hover:text-yellow-400" on:click={getIdea}><i class="fas fa-lightbulb"></i></a>
       </li>
       <li class="my-4">

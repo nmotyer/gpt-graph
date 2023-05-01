@@ -94,15 +94,21 @@ let messages: Array<object> = [];
     if (event.key === 'Enter') {
       event.preventDefault();
     }
-    if (event.key === 'Enter' && (event.target as HTMLTextAreaElement)?.value.trim() !== '') {
+    if (event.key === 'Enter' && (event.target as HTMLTextAreaElement)?.value.trim() !== '' && currentQueryTopic == 'data') {
       promptLabel = '';
       promptLabel = (event.target as HTMLTextAreaElement)?.value.trim();
       console.log('Enter key pressed and text exists in the textarea');
       const text: string = (event.target as HTMLTextAreaElement)?.value.trim();
       // messages = [...messages, { id: Date.now(), content: text, client: true }];
       addMessage({ id: Date.now(), content: text, client: true })
-      socket.emit('data', { 'prompt': text });
+      socket.emit(currentQueryTopic, { 'prompt': text });
       socket.emit('suggest_title', {'data': text})
+      currentQueryTopic = 'ambiguous'
+    }
+    else if (event.key === 'Enter' && (event.target as HTMLTextAreaElement)?.value.trim() !== '' && currentQueryTopic == 'ambiguous') {
+      const text: string = (event.target as HTMLTextAreaElement)?.value.trim();
+      addMessage({ id: Date.now(), content: text, client: true })
+      socket.emit(currentQueryTopic, { 'prompt': text });    
     }
   }
 
