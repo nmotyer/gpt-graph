@@ -46,8 +46,14 @@ def find_min_max(json_data: list[dict], key_to_use: str) -> list[dict]:
         closest_json = sorted_json_data[:middle] + sorted_json_data[middle + 1:]
     else:
         closest_json = sorted_json_data[:middle - 1] + sorted_json_data[middle + 1:]
-
-    random_json = random.sample(closest_json, k=8 if len(sorted_json_data) > 8 else len(sorted_json_data))
+    if len(closest_json) < 8: 
+        sample_size = len(closest_json)
+    else: 
+        sample_size = 8
+    if sample_size > 0:
+        random_json = random.sample(closest_json, k=sample_size)
+    else:
+        return closest_json
     random_json.insert(0, min_json)
     random_json.append(max_json)
     return random_json
@@ -100,7 +106,14 @@ def summarise_json(json_schema:dict, json_data:list[dict]) -> dict:
         print(field)
     number_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'number' and field not in date_names]
     # find the min, max and median of the number fields and return json rows that contain those or are nearest to those values
-    candidate_json = find_min_max(json_data, number_fields[0]) if len(number_fields) > 0 else random.choices(json_data, k=8 if len(json_data) > 8 else len(json_data))
+    if len(number_fields) > 0:
+        candidate_json = find_min_max(json_data, number_fields[0])
+    else:
+        if len(json_data) < 8:
+            sample_size = len(json_data)
+        else:
+            sample_size = 8
+        candidate_json = random.choices(json_data, k=sample_size)
 
     # check if any string fields are dates
     check_date_fields = [field for field in json_schema['properties'].keys() if json_schema['properties'][field]['type'] == 'string']
